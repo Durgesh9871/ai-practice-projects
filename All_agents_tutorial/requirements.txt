@@ -1,0 +1,52 @@
+langchain
+langchain-core
+langchain-community
+# OpenAI Integration
+langchain-openai
+openai
+
+# Anthropic Integration
+langchain-anthropic
+
+# Google Gemini (PaLM) Integration
+langchain-google-genai
+google-generativeai
+
+# Groq Integration
+langchain-groq
+groq
+
+# Hugging Face Integration
+langchain-huggingface
+transformers
+huggingface-hub
+sentence-transformers
+
+# Environment Variable Management
+python-dotenv
+
+# Machine Learning Utilities
+numpy
+scikit-learn
+
+pymupdf
+torch
+pillow
+torchvision
+faiss-cpu
+
+#meshapi
+jinja2
+python-multipart
+meshapi
+requests
+uvicorn
+
+# lite
+litellm
+neo4j
+
+# deep agents
+deepagents
+tavily-python
+
