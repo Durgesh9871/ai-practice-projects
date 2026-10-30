@@ -5,28 +5,31 @@ from langchain_core.messages import HumanMessage
 from data.loader import DB_PATH, load_csv_data
 import duckdb
 from langgraph.prebuilt import ToolNode
+from agent.tool_register import bind_tools
 
+
+
+def route_after_analyst(state:InvestigationGraphState):
+    """Conditional edge: decide whether to do tool call or stop the workflow."""
+
+    #check the latest message
+    last_message=state["messages"][-1]
+
+    if last_message.tool_calls:
+        return "tool"
+    else:
+        return "end"
 
 def build_graph(conn):
     workflow = StateGraph(InvestigationGraphState)
     analyst_node = make_analyst_node(conn)
+    tools = bind_tools(conn)
+    tools_node = ToolNode(tools)
 
     workflow.add_node("analyst",analyst_node)
-    workflow.add_node("tool",ToolNode(tools))
+    workflow.add_node("tool",tools_node)
 
 
-
-    
-    def route_after_analyst(state:InvestigationGraphState):
-        """Conditional edge: decide whether to do tool call or stop the workflow."""
-
-        #check the latest message
-        last_message=state.messages[-1]
-
-        if last_message.tool_calls:
-            return "tool"
-        else:
-            return END
   
     # workflow.set_entry_point("analyst")
     workflow.add_edge(START, "analyst")

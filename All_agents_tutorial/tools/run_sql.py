@@ -1,6 +1,7 @@
 from typing import Any
 from data.loader import DB_PATH
 import duckdb
+import re
 # from langchain_core.tools import tool
 
 
@@ -47,7 +48,7 @@ def validate_read_only_sql(sql:str):
         raise ValueError(f"Please use only read-only SQL. Avoid: {first_keyword}.")
 
     query_words = set(
-        re.findall(r"\b[A-Za-z]+\b", normalized_query.upper())
+        re.findall(r"\b[A-Za-z]+\b", normalize_query.upper())
     )  
 
     blocked_keywords = query_words.intersection(FORBIDDEN_KEYWORDS)     
