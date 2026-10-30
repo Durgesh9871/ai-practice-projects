@@ -1,15 +1,10 @@
 from typing import Any 
 import duckdb
-from langchain_core.tools import tool
+# from langchain_core.tools import tool
 
 
-@tool("Inspect Table")
+# @tool("Inspect Table")
 def inspect_table(conn: duckdb.DuckDBPyConnection) -> str:
-    """
-    Inspect all persistent tables in DuckDB.
-    Returns table names, columns, data types, row counts,
-    and a small sample of rows.
-    """
     try:
         table =[t[0] for t in conn.execute("SHOW TABLES").fetchall()]
         if not table:

@@ -1,7 +1,7 @@
 from typing import Any
 from data.loader import DB_PATH
 import duckdb
-from langchain_core.tools import tool
+# from langchain_core.tools import tool
 
 
 MAX_ROWS_RETURNED = 50
@@ -43,7 +43,7 @@ def validate_read_only_sql(sql:str):
     first_keyword = first_keyword_match.group(1).upper()
     
 
-    if first_keyword not in ["SELECT","WITH","EXPLAIN"]
+    if first_keyword not in ["SELECT","WITH","EXPLAIN"]:
         raise ValueError(f"Please use only read-only SQL. Avoid: {first_keyword}.")
 
     query_words = set(
@@ -57,11 +57,8 @@ def validate_read_only_sql(sql:str):
     
 
 
-@tool("run_sql_query")
+# @tool("run_sql_query")
 def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
-    """
-    Execute a SQL query on DuckDB and return results.
-    """
 
     try:
         validate_read_only_sql(query)
