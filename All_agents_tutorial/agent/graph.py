@@ -78,7 +78,7 @@ def run_investigation(objective:str , conn):
         # print(event)
         # print("-"*100)
     print("\n\n-----------------FINAL ANSWER-----------------\n\n")
-    print(final_answer["messages"][-1].content[0]["text"])
+    print(final_answer["final_report"])
 
 
 if __name__=="__main__":

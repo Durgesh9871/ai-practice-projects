@@ -4,7 +4,7 @@ from agent.graphstate import InvestigationGraphState
 
 
 def final_report(state:InvestigationGraphState)->InvestigationGraphState:
-    final_answer = state["messages"][-1].content
+    final_answer = state["messages"][-1].content[0]["text"]
      
     # print("\n\n-----------------FINAL ANSWER-----------------\n\n")
     # print(final_answer)
