@@ -6,7 +6,7 @@ from data.loader import DB_PATH, load_csv_data
 import duckdb
 from langgraph.prebuilt import ToolNode
 from agent.tool_register import bind_tools
-
+from agent.nodes.final_node import final_report
 
 
 def route_after_analyst(state:InvestigationGraphState):
@@ -18,7 +18,7 @@ def route_after_analyst(state:InvestigationGraphState):
     if last_message.tool_calls:
         return "tool"
     else:
-        return "end"
+        return "final_report"
 
 def build_graph(conn):
     workflow = StateGraph(InvestigationGraphState)
@@ -28,6 +28,8 @@ def build_graph(conn):
 
     workflow.add_node("analyst",analyst_node)
     workflow.add_node("tool",tools_node)
+    workflow.add_node("final_report",final_report)
+
 
 
   
@@ -38,12 +40,20 @@ def build_graph(conn):
         route_after_analyst,
         {
             "tool": "tool",
-            "end": END
+            "final_report": "final_report"
         }
     )
     workflow.add_edge("tool", "analyst")
+    workflow.add_edge("final_report", END)
 
-    return workflow.compile()
+
+    app = workflow.compile()
+
+
+
+    # print(app.get_graph().draw_mermaid())
+
+    return app 
 
 
 def run_investigation(objective:str , conn):
@@ -61,9 +71,14 @@ def run_investigation(objective:str , conn):
         final_report="",
     )
     events = workflow.stream(initial_state,stream_mode="values")
+    final_answer = ""
     for event in events:
-        print(event)
-        print("-"*100)
+        if "final_report" in event:
+            final_answer = event
+        # print(event)
+        # print("-"*100)
+    print("\n\n-----------------FINAL ANSWER-----------------\n\n")
+    print(final_answer["messages"][-1].content[0]["text"])
 
 
 if __name__=="__main__":
