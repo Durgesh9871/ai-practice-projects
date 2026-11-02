@@ -8,7 +8,7 @@ class Settings:
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.llm_model = "gemini-3.6-flash"
         self.max_steps = 5
-        self.max_tool_calls = 5
+        self.max_tool_calls = 3
         self.cache_ttl_seconds = 3600
         self.llm_provider = "gemini"
         self.temperature = 0.1

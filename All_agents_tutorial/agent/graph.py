@@ -8,17 +8,27 @@ from langgraph.prebuilt import ToolNode
 from agent.tool_register import bind_tools
 from agent.nodes.final_node import final_report
 from agent.nodes.budget_node import track_tool_usage
+from agent.nodes.safe_stop_node import safe_node
+from agent.config import setting
+
+
+max_tool_calls =setting.max_tool_calls
+max_steps = setting.max_steps
+
 
 def route_after_analyst(state:InvestigationGraphState):
     """Conditional edge: decide whether to do tool call or stop the workflow."""
-
+    
     #check the latest message
     last_message=state["messages"][-1]
 
-    if last_message.tool_calls:
-        return "tool"
+    if state["tool_calls"] > max_tool_calls or state["step_count"] >  max_steps:
+        return "safe_stop_node"
     else:
-        return "final_report"
+        if last_message.tool_calls:
+            return "tool"
+        else:
+            return "final_report"
 
 def build_graph(conn):
     workflow = StateGraph(InvestigationGraphState)
@@ -28,6 +38,7 @@ def build_graph(conn):
 
     workflow.add_node("analyst",analyst_node)
     workflow.add_node("track_tool_usage",track_tool_usage)
+    workflow.add_node("safe_stop_node",safe_node)
     workflow.add_node("tool",tools_node)
     workflow.add_node("final_report",final_report)
 
@@ -41,11 +52,13 @@ def build_graph(conn):
         "track_tool_usage",
         route_after_analyst,
         {
+            "safe_stop_node": "safe_stop_node",
             "tool": "tool",
             "final_report": "final_report"
         }
     )
     workflow.add_edge("tool", "analyst")
+    workflow.add_edge("safe_stop_node", "final_report")
     workflow.add_edge("final_report", END)
 
 
@@ -79,9 +92,9 @@ def run_investigation(objective:str , conn):
             final_answer = event
         # print(event)
         # print("-"*100)
-    print("\n\n-----------------FINAL ANSWER-----------------\n\n")
+    print("\n\n-----------------FINAL REPORT-----------------\n\n")
     print(final_answer["final_report"])
-    
+
     print("\n\n-----------------TOOL CALLS-----------------\n\n")
     print(final_answer["tool_calls"])
 
