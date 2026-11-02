@@ -7,7 +7,7 @@ import duckdb
 from langgraph.prebuilt import ToolNode
 from agent.tool_register import bind_tools
 from agent.nodes.final_node import final_report
-
+from agent.nodes.budget_node import track_tool_usage
 
 def route_after_analyst(state:InvestigationGraphState):
     """Conditional edge: decide whether to do tool call or stop the workflow."""
@@ -27,6 +27,7 @@ def build_graph(conn):
     tools_node = ToolNode(tools)
 
     workflow.add_node("analyst",analyst_node)
+    workflow.add_node("track_tool_usage",track_tool_usage)
     workflow.add_node("tool",tools_node)
     workflow.add_node("final_report",final_report)
 
@@ -35,8 +36,9 @@ def build_graph(conn):
   
     # workflow.set_entry_point("analyst")
     workflow.add_edge(START, "analyst")
+    workflow.add_edge("analyst","track_tool_usage")   
     workflow.add_conditional_edges(
-        "analyst",
+        "track_tool_usage",
         route_after_analyst,
         {
             "tool": "tool",
@@ -79,6 +81,20 @@ def run_investigation(objective:str , conn):
         # print("-"*100)
     print("\n\n-----------------FINAL ANSWER-----------------\n\n")
     print(final_answer["final_report"])
+    
+    print("\n\n-----------------TOOL CALLS-----------------\n\n")
+    print(final_answer["tool_calls"])
+
+    print("\n\n-----------------STEP COUNT-----------------\n\n")
+    print(final_answer["step_count"])
+
+    print("\n\n-----------------IS FINISHED-----------------\n\n")
+    print(final_answer["is_finished"])
+
+    
+
+    
+
 
 
 if __name__=="__main__":
