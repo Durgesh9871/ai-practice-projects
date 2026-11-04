@@ -47,7 +47,9 @@ def route_after_analyst(state: InvestigationGraphState):
     pending_calls = len(last_message.tool_calls)
 
     # Check whether the investigation exceeded its budget
-    if (
+    if pending_calls == 0:
+        return "final_report"
+    elif (
         state["step_count"] >= max_steps
         or state["tool_calls"] + pending_calls > max_tool_calls
     ):
@@ -104,6 +106,7 @@ def build_graph(conn):
         "analyst",
         route_after_analyst,
         {
+            "final_report": "final_report",
             "safe_stop_node": "safe_stop_node",
             "track_tool_usage": "track_tool_usage",
         },

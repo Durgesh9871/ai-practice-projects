@@ -21,6 +21,6 @@ def final_report(state:InvestigationGraphState)->InvestigationGraphState:
     return {
         "final_report": final_answer,
         "is_finished": True,
-        "step_count": state["step_count"] + 1,
+        # "step_count": state["step_count"] + 1,
     }
 
