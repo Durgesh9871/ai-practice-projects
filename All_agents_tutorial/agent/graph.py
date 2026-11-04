@@ -4,16 +4,20 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.messages import HumanMessage
 
 import duckdb
-
+from agent.config import setting
 from agent.nodes.analyst_node import make_analyst_node
 from agent.graphstate import InvestigationGraphState
 from agent.tool_register import bind_tools
 from agent.nodes.final_node import final_report
 from agent.nodes.budget_node import track_tool_usage
 from agent.nodes.safe_stop_node import safe_node
-from agent.config import setting
+from agent.nodes.observation_node import observation_node
 
 from data.loader import DB_PATH, load_csv_data
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
 
 
 max_tool_calls = setting.max_tool_calls
@@ -23,6 +27,14 @@ max_steps = setting.max_steps
 # --------------------------------------------------
 # 1. SAFETY CHECK AFTER ANALYST
 # --------------------------------------------------
+def display_ai_message(message):
+
+    from rich.pretty import pprint
+    pprint(message)
+    console.rule("[bold cyan]LLM RESPONSE[/bold cyan]")
+
+
+# Display tool calls
 
 
 def route_after_analyst(state: InvestigationGraphState):
@@ -79,6 +91,7 @@ def build_graph(conn):
     # Register nodes
     workflow.add_node("analyst", analyst_node)
     workflow.add_node("track_tool_usage", track_tool_usage)
+    workflow.add_node("observation_node", observation_node)
     workflow.add_node("safe_stop_node", safe_node)
     workflow.add_node("tool", tools_node)
     workflow.add_node("final_report", final_report)
@@ -107,7 +120,8 @@ def build_graph(conn):
     )
 
     # Tool execution -> Analyst again
-    workflow.add_edge("tool", "analyst")
+    workflow.add_edge("tool", "observation_node")
+    workflow.add_edge("observation_node", "analyst")
 
     # Safe stop -> Final report
     workflow.add_edge("safe_stop_node", "final_report")
@@ -138,6 +152,7 @@ def run_investigation(objective: str, conn):
         step_count=0,
         is_finished=False,
         final_report="",
+        tool_observation=[]     
     )
 
     events = workflow.stream(initial_state, stream_mode="values")
@@ -146,27 +161,29 @@ def run_investigation(objective: str, conn):
 
     for event in events:
         final_state = event
+        display_ai_message(event)
 
     if final_state is None:
         print("Investigation returned no state.")
         return
 
-    print("\n\n-----------------FINAL REPORT-----------------\n\n")
-    print(final_state["final_report"])
+    # print("\n\n-----------------FINAL REPORT-----------------\n\n")
+    # print(final_state["final_report"])
 
-    print("\n\n-----------------TOOL CALLS-----------------\n\n")
-    print(final_state["tool_calls"])
+    # print("\n\n-----------------TOOL CALLS-----------------\n\n")
+    # print(final_state["tool_calls"])
 
-    print("\n\n-----------------STEP COUNT-----------------\n\n")
-    print(final_state["step_count"])
+    # print("\n\n-----------------STEP COUNT-----------------\n\n")
+    # print(final_state["step_count"])
 
-    print("\n\n-----------------IS FINISHED-----------------\n\n")
-    print(final_state["is_finished"])
+    # print("\n\n-----------------IS FINISHED-----------------\n\n")
+    # print(final_state["is_finished"])
 
 
 # --------------------------------------------------
 # 5. MAIN
 # --------------------------------------------------
+
 
 if __name__ == "__main__":
 
