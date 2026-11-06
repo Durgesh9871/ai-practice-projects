@@ -11,10 +11,11 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
 
     def analyst_node(state: InvestigationGraphState) -> InvestigationGraphState:
         system_prompt = SystemMessage(
-            "You are an autonomous data analyst. "
-            "Analyze the user's question carefully. "
-            "For now, provide a concise response explaining "
-            "what should be investigated."
+            """- For non-trivial analytical questions, create a hypothesis before investigating.
+            - Record a finding only when it is supported by tool evidence.
+            - Every finding must include the related tool_call_id as evidence.
+            - Never record unsupported assumptions as findings.
+            - When sufficient evidence exists, provide the final answer."""
         )
 
         messages = [system_prompt] + state["messages"]

@@ -197,5 +197,5 @@ if __name__ == "__main__":
     conn, _ = load_csv_data(DATA_DIRECTORY)
 
     run_investigation(
-        "Inspect the dataset and tell me what tables are available.", conn
+        "Which product category has the highest estimated revenue, and what evidence supports it?", conn
     )

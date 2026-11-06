@@ -10,12 +10,22 @@ class Observation_Dict(TypedDict):
     content: str
 
 
+class Hypothesis(TypedDict):
+    statement: str
+    status: str  # open, supported, rejected
+
+
+class Finding(TypedDict):
+    statement: str
+    evidence_ids: list[str]
+    confidence: float
+
 class InvestigationGraphState(TypedDict):
     """Represents the state of the investigation."""
 
     messages: Annotated[list[BaseMessage], add_messages]
-    hypotheses: list[str]
-    findings: list[str]
+    hypotheses: Annotated[list[Hypothesis], add]
+    findings: Annotated[list[Finding], add]
     objective: str
     tool_calls: int
     step_count: int
