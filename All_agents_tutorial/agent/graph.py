@@ -12,10 +12,12 @@ from agent.nodes.final_node import final_report
 from agent.nodes.budget_node import track_tool_usage
 from agent.nodes.safe_stop_node import safe_node
 from agent.nodes.observation_node import observation_node
+from agent.tool_policy import DATA_TOOL_NAMES
 
 from data.loader import DB_PATH, load_csv_data
 from rich.console import Console
 from rich.panel import Panel
+from langchain_core.messages import ToolMessage
 
 console = Console()
 
@@ -44,18 +46,29 @@ def route_after_analyst(state: InvestigationGraphState):
 
     last_message = state["messages"][-1]
 
-    pending_calls = len(last_message.tool_calls)
+    reqested_calls = last_message.tool_calls
+    
+    if not reqested_calls:
+        return "final_report"
+
+    pending_calls = [
+        call for call in last_message.tool_calls 
+        if call["name"] in DATA_TOOL_NAMES
+    ]
 
     # Check whether the investigation exceeded its budget
-    if pending_calls == 0:
+    if len(pending_calls) == 0:
         return "final_report"
+
+    elif len(pending_calls) > 0 or pending_calls:
+        return "track_tool_usage"    
     elif (
         state["step_count"] >= max_steps
-        or state["tool_calls"] + pending_calls > max_tool_calls
+        or state["tool_calls"] + len(pending_calls) > max_tool_calls
     ):
         return "safe_stop_node"
 
-    return "track_tool_usage"
+    return "tool"
 
 
 # --------------------------------------------------
@@ -63,19 +76,16 @@ def route_after_analyst(state: InvestigationGraphState):
 # --------------------------------------------------
 
 
-def route_after_tracking(state: InvestigationGraphState):
-    """
-    Decide whether to execute tools or generate final report.
-    """
 
+
+def route_after_tool(state: InvestigationGraphState):
     last_message = state["messages"][-1]
 
-    if last_message.tool_calls:
-        return "tool"
+    if isinstance(last_message, ToolMessage):
+        if last_message.name in DATA_TOOL_NAMES:
+            return "observation_node"
 
-    return "final_report"
-
-
+    return "analyst"
 # --------------------------------------------------
 # 3. BUILD GRAPH
 # --------------------------------------------------
@@ -109,21 +119,21 @@ def build_graph(conn):
             "final_report": "final_report",
             "safe_stop_node": "safe_stop_node",
             "track_tool_usage": "track_tool_usage",
-        },
-    )
-
-    # Track usage -> Tool or Final report
-    workflow.add_conditional_edges(
-        "track_tool_usage",
-        route_after_tracking,
-        {
             "tool": "tool",
-            "final_report": "final_report",
         },
     )
 
+    workflow.add_edge("track_tool_usage", "tool")
     # Tool execution -> Analyst again
-    workflow.add_edge("tool", "observation_node")
+    workflow.add_conditional_edges(
+        "tool",
+        route_after_tool,
+        {
+            "observation_node": "observation_node",
+            "analyst": "analyst",
+        },
+    )
+
     workflow.add_edge("observation_node", "analyst")
 
     # Safe stop -> Final report
@@ -197,5 +207,5 @@ if __name__ == "__main__":
     conn, _ = load_csv_data(DATA_DIRECTORY)
 
     run_investigation(
-        "Which product category has the highest estimated revenue, and what evidence supports it?", conn
+        "Inspect the dataset and tell me what tables are available.", conn
     )
