@@ -15,6 +15,7 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
     
     def analyst_node(state: InvestigationGraphState) -> InvestigationGraphState:
 
+        
         evidence_inventory = [
         {
         "tool_call_id": observation["tool_call_id"],
@@ -31,7 +32,8 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
         "tool_call_id from this inventory."
         )
         )
-        
+
+
         system_prompt = SystemMessage(
             """- For non-trivial analytical questions, create a hypothesis before investigating.
             - Record a finding only when it is supported by tool evidence.
@@ -39,6 +41,17 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
             - Never record unsupported assumptions as findings.
             - When sufficient evidence exists, provide the final answer."""
         )
+
+        completion_feedback = state.get("completion_feedback", "")
+
+        if completion_feedback:
+            system_prompt += (
+                "\nYour previous completion attempt was rejected: "
+                f"{completion_feedback} "
+                "Correct the issue before attempting the final answer again."
+            )
+        
+        
 
         messages = [system_prompt , evidence_message] + state["messages"]
         llm = get_llm()
@@ -54,6 +67,8 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
         return {
             "messages": [response],
             "step_count": state["step_count"] + 1,
+            "completion_valid": False,
+            "completion_feedback": "",
             # "findings":response.content
         }
 

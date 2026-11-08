@@ -18,6 +18,7 @@ from data.loader import DB_PATH, load_csv_data
 from rich.console import Console
 from rich.panel import Panel
 from langchain_core.messages import ToolMessage
+from agent.nodes.completion_validator_node import validate_completion
 
 console = Console()
 
@@ -46,10 +47,12 @@ def route_after_analyst(state: InvestigationGraphState):
 
     last_message = state["messages"][-1]
 
-    reqested_calls = last_message.tool_calls
+    requested_calls = last_message.tool_calls
     
-    if not reqested_calls:
-        return "final_report"
+    # if not reqested_calls:
+    #     return "final_report"
+    if not requested_calls:
+        return "completion_validator"
 
     pending_calls = [
         call for call in last_message.tool_calls 
@@ -70,9 +73,16 @@ def route_after_analyst(state: InvestigationGraphState):
 
 
 # --------------------------------------------------
-# 2. ROUTE AFTER TRACKING TOOL USAGE
+# 2. ROUTE AFTER completion
 # --------------------------------------------------
+def route_after_completion(state: InvestigationGraphState):
+    if state["completion_valid"]:
+        return "final_report"
 
+    if state["completion_attempts"] >= 2:
+        return "safe_stop_node"
+
+    return "analyst"
 
 
 
@@ -100,6 +110,7 @@ def build_graph(conn):
 
     # Register nodes
     workflow.add_node("analyst", analyst_node)
+    workflow.add_node("validate_completion", validate_completion)
     workflow.add_node("track_tool_usage", track_tool_usage)
     workflow.add_node("observation_node", observation_node)
     workflow.add_node("safe_stop_node", safe_node)
@@ -114,12 +125,22 @@ def build_graph(conn):
         "analyst",
         route_after_analyst,
         {
-            "final_report": "final_report",
+            "completion_validator": "completion_validator",
             "safe_stop_node": "safe_stop_node",
             "track_tool_usage": "track_tool_usage",
             "tool": "tool",
         },
     )
+
+    workflow.add_conditional_edges(
+    "completion_validator",
+    route_after_completion,
+    {
+        "final_report": "final_report",
+        "analyst": "analyst",
+        "safe_stop_node": "safe_stop_node",
+    },
+)
 
     workflow.add_edge("track_tool_usage", "tool")
     # Tool execution -> Analyst again
@@ -163,7 +184,10 @@ def run_investigation(objective: str, conn):
         step_count=0,
         is_finished=False,
         final_report="",
-        tool_observation=[]     
+        tool_observation=[] ,
+        completion_valid=False,
+        completion_feedback="",
+        completion_attempts=0,    
     )
 
     events = workflow.stream(initial_state, stream_mode="values")

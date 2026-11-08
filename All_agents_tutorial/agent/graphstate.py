@@ -32,3 +32,6 @@ class InvestigationGraphState(TypedDict):
     is_finished: bool
     final_report: str
     tool_observation: Annotated[list[Observation_Dict], add]
+    completion_valid: bool
+    completion_feedback: str
+    completion_attempts: int
