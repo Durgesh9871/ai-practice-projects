@@ -56,13 +56,15 @@ def route_after_analyst(state: InvestigationGraphState):
         if call["name"] in DATA_TOOL_NAMES
     ]
 
-    if len(pending_calls) > 0 or pending_calls:
-        return "track_tool_usage"    
-    elif (
+        
+    if (
         state["step_count"] >= max_steps
         or state["tool_calls"] + len(pending_calls) > max_tool_calls
     ):
         return "safe_stop_node"
+
+    elif len(pending_calls) > 0:
+        return "track_tool_usage"    
 
     return "tool"
 

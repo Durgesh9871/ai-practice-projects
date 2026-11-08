@@ -6,7 +6,8 @@ from langgraph.types import Command
 from langchain_core.messages import ToolMessage
 from typing import Annotated
 
-
+from agent.tool_policy import DATA_TOOL_NAMES
+from langgraph.prebuilt import InjectedState
 
 
 def bind_tools(conn:duckdb.DuckDBPyConnection):
@@ -39,10 +40,36 @@ def bind_tools(conn:duckdb.DuckDBPyConnection):
         })
 
     @tool("record_finding")
-    def record_finding(statement:str, tool_call_id: Annotated[str, InjectedToolCallId], evidence_ids:list[str], confidence:float)->Command:
+    def record_finding(statement:str, tool_call_id: Annotated[str, InjectedToolCallId], evidence_ids:list[str], confidence:float, state: Annotated[dict, InjectedState])->Command:
         """
         Record a confirmed finding with evidence.
         """
+        valid_evidence_ids = {
+            item["tool_call_id"]
+            for item in state["tool_observation"]
+            if item["tool_name"] in DATA_TOOL_NAMES
+        }
+        invalid_ids = [
+        evidence_id
+        for evidence_id in evidence_ids
+        if evidence_id not in valid_evidence_ids
+        ]
+        
+        if invalid_ids or not 0.0 <= confidence <= 1.0:
+            return Command(
+                update={
+                "messages": [
+                    ToolMessage(
+                        content=(
+                            f"Finding rejected. Invalid evidence IDs: {invalid_ids}. "
+                            f"Valid IDs are: {sorted(valid_evidence_ids)}"
+                        ),
+                        tool_call_id=tool_call_id,
+                    )
+                ]
+            }
+        )
+
         return Command(update={
             "findings": [{"statement": statement, "evidence_ids": evidence_ids, "confidence": confidence}],
             "messages": [ToolMessage(content=f"Finding recorded: {statement}", tool_call_id=tool_call_id)]
