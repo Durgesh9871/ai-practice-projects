@@ -56,11 +56,7 @@ def route_after_analyst(state: InvestigationGraphState):
         if call["name"] in DATA_TOOL_NAMES
     ]
 
-    # Check whether the investigation exceeded its budget
-    if len(pending_calls) == 0:
-        return "final_report"
-
-    elif len(pending_calls) > 0 or pending_calls:
+    if len(pending_calls) > 0 or pending_calls:
         return "track_tool_usage"    
     elif (
         state["step_count"] >= max_steps

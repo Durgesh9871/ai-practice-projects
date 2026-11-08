@@ -1,9 +1,10 @@
 from agent.graphstate import InvestigationGraphState
 from agent.provider.factory import get_llm
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, AIMessage
 
 from agent.tool_register import bind_tools
 import duckdb
+from agent.tool_policy import DATA_TOOL_NAMES
 
 
 def make_analyst_node(conn: duckdb.DuckDBPyConnection):
@@ -23,9 +24,15 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
         llm_with_tools = llm.bind_tools(analyst_tools)
 
         response = llm_with_tools.invoke(messages)
+
+        data_tool_calls = sum(
+            call["name"] in DATA_TOOL_NAMES
+            for call in response.tool_calls
+        )
+
         return {
             "messages": [response],
-            "step_count": state["step_count"] + 1,
+            "step_count": state["step_count"] + data_tool_calls,
             # "findings":response.content
         }
 
