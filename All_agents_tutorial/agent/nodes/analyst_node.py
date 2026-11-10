@@ -34,24 +34,40 @@ def make_analyst_node(conn: duckdb.DuckDBPyConnection):
         )
 
 
-        system_prompt = SystemMessage(
-            """- For non-trivial analytical questions, create a hypothesis before investigating.
-            - Record a finding only when it is supported by tool evidence.
-            - Every finding must include the related tool_call_id as evidence.
-            - Never record unsupported assumptions as findings.
-            - When sufficient evidence exists, provide the final answer."""
-        )
+        system_text = """
+You are a self-driving data analyst.
+
+Rules:
+- For non-trivial analytical questions, create a hypothesis first.
+- Inspect the database before assuming table or column names.
+- Use run_sql for quantitative analysis.
+- Record a finding only when supported by tool evidence.
+- Every finding must use an exact tool_call_id from the evidence inventory.
+- Never record unsupported assumptions as findings.
+- If SQL fails, study the error and generate corrected SQL.
+- Never repeat an SQL query that has already failed.
+- When sufficient evidence exists, provide the final answer.
+"""
 
         completion_feedback = state.get("completion_feedback", "")
+        last_sql_error = state.get("last_sql_error", "")
 
         if completion_feedback:
-            system_prompt += (
+            system_text += (
                 "\nYour previous completion attempt was rejected: "
                 f"{completion_feedback} "
                 "Correct the issue before attempting the final answer again."
             )
+            
+        if last_sql_error:
+            system_text += (
+                "\nThe previous SQL query failed with this error:\n"
+                f"{last_sql_error}\n"
+                "Diagnose the error and submit corrected SQL. "
+                "Do not repeat the failed query.\n"
+            )
         
-        
+        system_prompt = SystemMessage(content=system_text)
 
         messages = [system_prompt , evidence_message] + state["messages"]
         llm = get_llm()

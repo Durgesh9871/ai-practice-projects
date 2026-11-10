@@ -18,13 +18,18 @@ from data.loader import DB_PATH, load_csv_data
 from rich.console import Console
 from rich.panel import Panel
 from langchain_core.messages import ToolMessage
-from agent.nodes.completion_validator_node import validate_completion
+from agent.nodes.completion_node import validate_completion
+
+from agent.nodes.duplicate_sql_node import duplicate_sql_node
+from agent.nodes.sql_failure_node import sql_failure_node
+from agent.sql_utils import normalize_sql
 
 console = Console()
 
 
 max_tool_calls = setting.max_tool_calls
 max_steps = setting.max_steps
+
 
 
 # --------------------------------------------------
@@ -39,35 +44,57 @@ def display_ai_message(message):
 
 # Display tool calls
 
+# helper function to check sql query is duplicated or not 
+def contains_duplicate_failed_sql(state: InvestigationGraphState) -> bool:
+    failed_queries = {
+        attempt["normalized_query"]
+        for attempt in state["sql_attempts"]
+        if not attempt["success"]
+    }
+
+    latest_message = state["messages"][-1]
+
+    for tool_call in latest_message.tool_calls:
+        if tool_call["name"] != "run_sql":
+            continue
+
+        query = tool_call["args"].get("query", "")
+
+        if normalize_sql(query) in failed_queries:
+            return True
+
+    return False
+
+
+
 
 def route_after_analyst(state: InvestigationGraphState):
-    """
-    Check safety budget before executing requested tools.
-    """
-
     last_message = state["messages"][-1]
-
     requested_calls = last_message.tool_calls
-    
-    # if not reqested_calls:
-    #     return "final_report"
+
     if not requested_calls:
         return "completion_validator"
 
-    pending_calls = [
-        call for call in last_message.tool_calls 
+    if state["step_count"] >= setting.max_steps:
+        return "safe_stop_node"
+
+    pending_data_calls = [
+        call
+        for call in requested_calls
         if call["name"] in DATA_TOOL_NAMES
     ]
 
-        
+    if contains_duplicate_failed_sql(state):
+        return "duplicate_sql_node"
+
     if (
-        state["step_count"] >= max_steps
-        or state["tool_calls"] + len(pending_calls) > max_tool_calls
+        state["tool_calls"] + len(pending_data_calls)
+        > setting.max_tool_calls
     ):
         return "safe_stop_node"
 
-    elif len(pending_calls) > 0:
-        return "track_tool_usage"    
+    if pending_data_calls:
+        return "track_tool_usage"
 
     return "tool"
 
@@ -95,8 +122,14 @@ def route_after_tool(state: InvestigationGraphState):
 
     return "analyst"
 # --------------------------------------------------
-# 3. BUILD GRAPH
-# --------------------------------------------------
+
+def route_after_observation(state: InvestigationGraphState):
+    if state["sql_error_count"] >= setting.max_sql_errors:
+        return "sql_failure_node"
+
+    return "analyst"
+
+
 
 
 def build_graph(conn):
@@ -110,7 +143,11 @@ def build_graph(conn):
 
     # Register nodes
     workflow.add_node("analyst", analyst_node)
-    workflow.add_node("validate_completion", validate_completion)
+
+    workflow.add_node("completion_validator", validate_completion)
+    workflow.add_node("duplicate_sql_node", duplicate_sql_node)
+    workflow.add_node("sql_failure_node", sql_failure_node)
+
     workflow.add_node("track_tool_usage", track_tool_usage)
     workflow.add_node("observation_node", observation_node)
     workflow.add_node("safe_stop_node", safe_node)
@@ -126,6 +163,7 @@ def build_graph(conn):
         route_after_analyst,
         {
             "completion_validator": "completion_validator",
+            "duplicate_sql_node": "duplicate_sql_node",
             "safe_stop_node": "safe_stop_node",
             "track_tool_usage": "track_tool_usage",
             "tool": "tool",
@@ -153,8 +191,17 @@ def build_graph(conn):
         },
     )
 
-    workflow.add_edge("observation_node", "analyst")
+    workflow.add_conditional_edges(
+    "observation_node",
+    route_after_observation,
+    {
+        "analyst": "analyst",
+        "sql_failure_node": "sql_failure_node",
+    },
+    )
 
+    workflow.add_edge("duplicate_sql_node", "observation_node")
+    workflow.add_edge("sql_failure_node", "final_report")
     # Safe stop -> Final report
     workflow.add_edge("safe_stop_node", "final_report")
 
@@ -188,6 +235,9 @@ def run_investigation(objective: str, conn):
         completion_valid=False,
         completion_feedback="",
         completion_attempts=0,    
+        sql_attempts=[],
+        sql_error_count=0,
+        last_sql_error="",
     )
 
     events = workflow.stream(initial_state, stream_mode="values")
@@ -229,5 +279,5 @@ if __name__ == "__main__":
     conn, _ = load_csv_data(DATA_DIRECTORY)
 
     run_investigation(
-        "Inspect the dataset and tell me what tables are available.", conn
+        "Inspect the database and tell me how many records exist in each table.", conn
     )

@@ -20,6 +20,15 @@ class Finding(TypedDict):
     evidence_ids: list[str]
     confidence: float
 
+class SQLAttempt(TypedDict):
+    query: str
+    normalized_query: str
+    tool_call_id: str
+    success: bool
+    error: str
+
+
+
 class InvestigationGraphState(TypedDict):
     """Represents the state of the investigation."""
 
@@ -35,3 +44,6 @@ class InvestigationGraphState(TypedDict):
     completion_valid: bool
     completion_feedback: str
     completion_attempts: int
+    sql_attempts: Annotated[list[SQLAttempt], add]
+    sql_error_count: int
+    last_sql_error: str

@@ -2,11 +2,27 @@ from agent.graphstate import InvestigationGraphState
 from agent.tool_policy import DATA_TOOL_NAMES
 
 
+def extract_text(content) -> str:
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        return "\n".join(
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict)
+        ).strip()
+
+    return str(content).strip()
+
+
 def validate_completion(state: InvestigationGraphState) -> dict:
     errors = []
 
-    if not state["final_report"]:
-        errors.append("Final report is missing.")
+    latest_answer = extract_text(state["messages"][-1].content)
+
+    if not latest_answer:
+        errors.append("Final answer is missing.")
 
     valid_evidence_ids = {
         observation["tool_call_id"]
@@ -37,7 +53,9 @@ def validate_completion(state: InvestigationGraphState) -> dict:
             )
 
         if not 0.0 <= finding["confidence"] <= 1.0:
-            errors.append("Finding confidence must be between 0 and 1.")
+            errors.append(
+                "Finding confidence must be between 0 and 1."
+            )
 
     return {
         "completion_valid": not errors,

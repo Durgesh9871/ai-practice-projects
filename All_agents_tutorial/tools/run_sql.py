@@ -67,7 +67,8 @@ def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
         data_frame = conn.execute(query).fetchdf()
 
         total_rows = len(data_frame)
-        limited_dataframe = data_frame.head(MAX_ROWS_RETURNED)   
+        limited_dataframe = data_frame.head(MAX_ROWS_RETURNED) 
+
 
 
         return {
