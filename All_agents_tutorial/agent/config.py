@@ -1,6 +1,11 @@
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 load_dotenv()
+
+DATA_DIRECTORY = Path(__file__).resolve().parent.parent
+
+# print(DATA_DIRECTORY)
 
 
 class Settings:
@@ -14,6 +19,8 @@ class Settings:
         self.temperature = 0.1
         self.top_p = 0.9
         self.max_sql_errors = 2
+
+        self.app_database_path = DATA_DIRECTORY / "data" / "app_database.sqlite3"
 
         if not self.gemini_api_key:
             raise ValueError("GEMINI_API_KEY is not set")    

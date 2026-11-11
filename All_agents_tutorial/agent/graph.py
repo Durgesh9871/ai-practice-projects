@@ -178,7 +178,7 @@ def build_graph(conn):
         "analyst": "analyst",
         "safe_stop_node": "safe_stop_node",
     },
-)
+    )
 
     workflow.add_edge("track_tool_usage", "tool")
     # Tool execution -> Analyst again
