@@ -6,6 +6,7 @@ from agent.tool_register import bind_tools
 import duckdb
 from agent.tool_policy import DATA_TOOL_NAMES
 import json
+from agent.config import setting
 
 
 def make_analyst_node(conn: duckdb.DuckDBPyConnection):
@@ -69,7 +70,25 @@ Rules:
         
         system_prompt = SystemMessage(content=system_text)
 
-        messages = [system_prompt , evidence_message] + state["messages"]
+        # messages = [system_prompt , evidence_message] + state["messages"]
+        recent_messages = state["messages"][
+            -setting.recent_messages_to_keep:
+        ]
+
+        memory_message = SystemMessage(
+            content=(
+                "CONVERSATION MEMORY:\n"
+                f"{state.get('conversation_summary', 'No summary yet.')}"
+            )
+        )
+
+        messages = [
+            system_prompt,
+            memory_message,
+            evidence_message,
+        ] + recent_messages
+
+
         llm = get_llm()
         llm_with_tools = llm.bind_tools(analyst_tools)
 

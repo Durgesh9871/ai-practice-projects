@@ -19,6 +19,8 @@ class Settings:
         self.temperature = 0.1
         self.top_p = 0.9
         self.max_sql_errors = 2
+        self.max_context_messages = 12
+        self.recent_messages_to_keep = 6
 
         self.app_database_path = DATA_DIRECTORY / "data" / "app_database.sqlite3"
 

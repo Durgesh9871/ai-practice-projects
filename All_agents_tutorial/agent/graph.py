@@ -23,6 +23,7 @@ from agent.nodes.completion_node import validate_completion
 from agent.nodes.duplicate_sql_node import duplicate_sql_node
 from agent.nodes.sql_failure_node import sql_failure_node
 from agent.sql_utils import normalize_sql
+from agent.nodes.context_manager_node import context_manager_node
 
 console = Console()
 
@@ -142,6 +143,7 @@ def build_graph(conn ,checkpointer=None):
     tools_node = ToolNode(tools)
 
     # Register nodes
+    workflow.add_node("context_manager", context_manager_node)
     workflow.add_node("analyst", analyst_node)
 
     workflow.add_node("completion_validator", validate_completion)
@@ -155,7 +157,8 @@ def build_graph(conn ,checkpointer=None):
     workflow.add_node("final_report", final_report)
 
     # Entry point
-    workflow.add_edge(START, "analyst")
+    workflow.add_edge(START, "context_manager")
+    workflow.add_edge("context_manager", "analyst")
 
     # Analyst -> Safety check
     workflow.add_conditional_edges(

@@ -47,3 +47,5 @@ class InvestigationGraphState(TypedDict):
     sql_attempts: Annotated[list[SQLAttempt], add]
     sql_error_count: int
     last_sql_error: str
+    conversation_summary: str
+    summarized_message_count: int

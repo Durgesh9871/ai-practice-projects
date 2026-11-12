@@ -32,6 +32,8 @@ def new_investigation_state(objective: str) -> dict:
         "sql_attempts": [],
         "sql_error_count": 0,
         "last_sql_error": "",
+        "conversation_summary": "",
+        "summarized_message_count": 0,
     }
 
 
