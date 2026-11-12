@@ -71,23 +71,27 @@ Rules:
         system_prompt = SystemMessage(content=system_text)
 
         # messages = [system_prompt , evidence_message] + state["messages"]
-        recent_messages = state["messages"][
-            -setting.recent_messages_to_keep:
-        ]
+        if state.get("summarized_message_count", 0) > 0:
+            context_messages = state["messages"][
+                -setting.recent_messages_to_keep:
+            ]
 
-        memory_message = SystemMessage(
+            memory_message = SystemMessage(
             content=(
-                "CONVERSATION MEMORY:\n"
-                f"{state.get('conversation_summary', 'No summary yet.')}"
+            "CONVERSATION MEMORY:\n"
+            f"{state['conversation_summary']}"
             )
-        )
+            )
 
-        messages = [
-            system_prompt,
-            memory_message,
-            evidence_message,
-        ] + recent_messages
+            messages = [
+                system_prompt,
+                memory_message,
+                evidence_message,
+            ] + context_messages
 
+
+        else:
+            messages = [system_prompt, evidence_message] + state["messages"]
 
         llm = get_llm()
         llm_with_tools = llm.bind_tools(analyst_tools)

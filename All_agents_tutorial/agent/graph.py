@@ -110,7 +110,7 @@ def route_after_completion(state: InvestigationGraphState):
     if state["completion_attempts"] >= 2:
         return "safe_stop_node"
 
-    return "analyst"
+    return "context_manager"
 
 
 
@@ -121,14 +121,14 @@ def route_after_tool(state: InvestigationGraphState):
         if last_message.name in DATA_TOOL_NAMES:
             return "observation_node"
 
-    return "analyst"
+    return "context_manager"
 # --------------------------------------------------
 
 def route_after_observation(state: InvestigationGraphState):
     if state["sql_error_count"] >= setting.max_sql_errors:
         return "sql_failure_node"
 
-    return "analyst"
+    return "context_manager"
 
 
 
@@ -178,10 +178,11 @@ def build_graph(conn ,checkpointer=None):
     route_after_completion,
     {
         "final_report": "final_report",
-        "analyst": "analyst",
+        "context_manager": "context_manager",
         "safe_stop_node": "safe_stop_node",
     },
     )
+    
 
     workflow.add_edge("track_tool_usage", "tool")
     # Tool execution -> Analyst again
@@ -190,7 +191,7 @@ def build_graph(conn ,checkpointer=None):
         route_after_tool,
         {
             "observation_node": "observation_node",
-            "analyst": "analyst",
+            "context_manager": "context_manager",
         },
     )
 
@@ -198,10 +199,11 @@ def build_graph(conn ,checkpointer=None):
     "observation_node",
     route_after_observation,
     {
-        "analyst": "analyst",
+        "context_manager": "context_manager",
         "sql_failure_node": "sql_failure_node",
     },
     )
+    workflow.add_edge("context_manager", "analyst")
 
     workflow.add_edge("duplicate_sql_node", "observation_node")
     workflow.add_edge("sql_failure_node", "final_report")
