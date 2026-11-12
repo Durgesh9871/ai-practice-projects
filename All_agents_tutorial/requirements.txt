@@ -53,3 +53,5 @@ tavily-python
 
 duckdb
 rich
+langgraph
+langgraph-checkpoint-sqlite

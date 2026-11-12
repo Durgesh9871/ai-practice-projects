@@ -132,7 +132,7 @@ def route_after_observation(state: InvestigationGraphState):
 
 
 
-def build_graph(conn):
+def build_graph(conn ,checkpointer=None):
 
     workflow = StateGraph(InvestigationGraphState)
 
@@ -208,7 +208,7 @@ def build_graph(conn):
     # Final report -> END
     workflow.add_edge("final_report", END)
 
-    app = workflow.compile()
+    app = workflow.compile(checkpointer=checkpointer)
 
     return app
 
