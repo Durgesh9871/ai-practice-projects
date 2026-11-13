@@ -1,18 +1,17 @@
 
 from agent.graphstate import InvestigationGraphState
-
+from agent.gaurdrails.pil_gaurdrails import redact_text
 
 
 def final_report(state:InvestigationGraphState)->InvestigationGraphState:
     final_answer = state["messages"][-1].content
 
     if isinstance(final_answer, list) and len(final_answer) > 0:
-        final_answer = final_answer[0]["text"]
+        answer = final_answer[0]["text"]
     else:
-        final_answer = " ".join(final_answer.split()) 
+        answer = " ".join(final_answer.split()) 
            
-
-
+    final_answer = redact_text(answer)
 
      
     # print("\n\n-----------------FINAL ANSWER-----------------\n\n")

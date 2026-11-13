@@ -74,14 +74,15 @@ if __name__ == "__main__":
     #             "GROUP BY thread_id"
     #         ).fetchall()
     #     )
-    print(
-        "Conversation summary:",
-        second_result["state"]["conversation_summary"],
-    )
 
-    print(
-        "Summarized message count:",
-        second_result["state"]["summarized_message_count"],
-    )
+    # print(
+    #     "Conversation summary:",
+    #     second_result["state"]["conversation_summary"],
+    # )
+
+    # print(
+    #     "Summarized message count:",
+    #     second_result["state"]["summarized_message_count"],
+    # )
 
     conn.close()

@@ -3,7 +3,8 @@ from data.loader import DB_PATH
 import duckdb
 import re
 # from langchain_core.tools import tool
-from agent.guardrails.sql_guard import validate_read_only_sql
+from agent.gaurdrails.sql_gaurdrails import validate_read_only_sql
+from agent.gaurdrails.pil_gaurdrails import redact_rows
 
 MAX_ROWS_RETURNED = 50
 
@@ -79,16 +80,17 @@ def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
         for row in limited_rows:
             row_dict = dict(zip(columns, row))
             rows.append(row_dict)
- 
+
+        safe_rows = redact_rows(rows)
         # total_rows = len(data_frame)
         # limited_dataframe = data_frame.head(MAX_ROWS_RETURNED) 
 
         return {
             "success": True,
             "columns": columns,
-            "rows": rows,
-            "row_count": None if truncated else len(rows),
-            "returned_rows": len(rows),
+            "rows": safe_rows,
+            "row_count": None if truncated else len(safe_rows),
+            "returned_rows": len(safe_rows),
             "truncated": truncated,
         }
 
