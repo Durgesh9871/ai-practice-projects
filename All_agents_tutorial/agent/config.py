@@ -22,6 +22,8 @@ class Settings:
         self.max_context_messages = 12
         self.recent_messages_to_keep = 6
         self.max_objective_characters = 4000
+        self.max_final_report_characters = 6000
+        self.sql_cache_ttl_seconds = 300
 
         self.app_database_path = DATA_DIRECTORY / "data" / "app_database.sqlite3"
 

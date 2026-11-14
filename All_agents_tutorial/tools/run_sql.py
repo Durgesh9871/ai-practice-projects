@@ -5,6 +5,13 @@ import re
 # from langchain_core.tools import tool
 from agent.gaurdrails.sql_gaurdrails import validate_read_only_sql
 from agent.gaurdrails.pil_gaurdrails import redact_rows
+from agent.cache.cache_keys import (
+    is_cacheable_sql,
+    make_sql_cache_key,
+)
+
+from agent.cache.memory_cache import sql_result_cache
+from agent.config import setting
 
 MAX_ROWS_RETURNED = 50
 
@@ -59,11 +66,19 @@ MAX_ROWS_RETURNED = 50
     
 
 
-# @tool("run_sql_query")
 def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
 
     try:
         validate_read_only_sql(query)
+        
+        if is_cacheable_sql(query):
+            cache_key = make_sql_cache_key(query)
+            cached_result = sql_result_cache.get(cache_key)
+            if cached_result is not None:
+                return {
+                    **cached_result,
+                    "cache_hit": True,
+                }
 
         cursor = conn.execute(query)
         columns = [
@@ -85,14 +100,20 @@ def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
         # total_rows = len(data_frame)
         # limited_dataframe = data_frame.head(MAX_ROWS_RETURNED) 
 
-        return {
+        result = {
             "success": True,
             "columns": columns,
             "rows": safe_rows,
             "row_count": None if truncated else len(safe_rows),
             "returned_rows": len(safe_rows),
             "truncated": truncated,
+            "cache_hit": False,
         }
+        
+        if is_cacheable_sql(query):
+            sql_result_cache.set(cache_key, result, setting.sql_cache_ttl_seconds)
+        
+        return result
 
 
     except Exception as e:

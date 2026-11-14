@@ -1,6 +1,8 @@
 
-from agent.graphstate import InvestigationGraphState
 from agent.gaurdrails.pil_gaurdrails import redact_text
+from agent.config import setting
+from agent.graphstate import InvestigationGraphState
+from agent.guardrails.output_guard import sanitize_final_report
 
 
 def final_report(state:InvestigationGraphState)->InvestigationGraphState:
@@ -11,7 +13,12 @@ def final_report(state:InvestigationGraphState)->InvestigationGraphState:
     else:
         answer = " ".join(final_answer.split()) 
            
-    final_answer = redact_text(answer)
+    final_answer = sanitize_final_report(
+    report=answer,
+    findings=state["findings"],
+    tool_observations=state["tool_observation"],
+    max_characters=setting.max_final_report_characters,
+)
 
      
     # print("\n\n-----------------FINAL ANSWER-----------------\n\n")
