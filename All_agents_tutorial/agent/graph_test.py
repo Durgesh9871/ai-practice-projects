@@ -31,8 +31,9 @@ import sqlite3
 
 from agent.config import setting
 from agent.services.investigation_service import execute_investigation
-from agent.gaurdrails.input_gaurd import validate_objective
+from agent.guardrails.input_guard import validate_objective
 from data.loader import load_csv_data
+from agent.cache.memory_cache import sql_result_cache
 
 
 if __name__ == "__main__":
@@ -57,6 +58,8 @@ if __name__ == "__main__":
     print("Thread ID:", first_result["thread_id"])
     print("First report:", first_result["final_report"])
     print("Second report:", second_result["final_report"])
+
+    print("Cache metrics:", sql_result_cache.get_stats())
 
     # with sqlite3.connect(setting.app_database_path) as connection:
     #     print(

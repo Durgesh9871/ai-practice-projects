@@ -75,6 +75,12 @@ Create an updated factual summary. Preserve:
 Do not invent facts. Keep it concise.
 """
 
+    print("Prompt:", repr(prompt))
+    print("Prompt length:", len(prompt))
+    print("Messages to summarize:", len(messages_to_summarize))
+    print("History text:", repr(history_text))
+    print("*"*5)
+
     response = get_llm().invoke(
         [SystemMessage(content=prompt)]
     )

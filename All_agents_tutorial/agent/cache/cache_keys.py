@@ -1,13 +1,15 @@
 import hashlib
-from typing import Any
 from agent.sql_utils import normalize_sql
 
 
-def make_sql_cache_key(query: str) -> str:
+
+
+def make_sql_cache_key(query: str , dbpath: str) -> str:
     """Create a cache key from function arguments."""
     normalized_query = normalize_sql(query)
 
-    digest = hashlib.sha256(normalized_query.encode('utf-8')).hexdigest()
+    raw_query = f'{dbpath}:{normalized_query}'
+    digest = hashlib.sha256(raw_query.encode('utf-8')).hexdigest()
     return f"sql-result:{digest}"
 
 

@@ -3,8 +3,8 @@ from data.loader import DB_PATH
 import duckdb
 import re
 # from langchain_core.tools import tool
-from agent.gaurdrails.sql_gaurdrails import validate_read_only_sql
-from agent.gaurdrails.pil_gaurdrails import redact_rows
+from agent.guardrails.sql_guardrails import validate_read_only_sql
+from agent.guardrails.pil_guardrails import redact_rows
 from agent.cache.cache_keys import (
     is_cacheable_sql,
     make_sql_cache_key,
@@ -72,7 +72,7 @@ def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
         validate_read_only_sql(query)
         
         if is_cacheable_sql(query):
-            cache_key = make_sql_cache_key(query)
+            cache_key = make_sql_cache_key(query , dbpath=str(DB_PATH.resolve()),)
             cached_result = sql_result_cache.get(cache_key)
             if cached_result is not None:
                 return {

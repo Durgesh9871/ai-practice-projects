@@ -1,4 +1,4 @@
-from agent.guardrails.pii_guard import redact_text
+from agent.guardrails.pil_guardrails import redact_text
 from agent.tool_policy import DATA_TOOL_NAMES
 
 

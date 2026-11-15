@@ -1,5 +1,4 @@
 
-from agent.gaurdrails.pil_gaurdrails import redact_text
 from agent.config import setting
 from agent.graphstate import InvestigationGraphState
 from agent.guardrails.output_guard import sanitize_final_report
