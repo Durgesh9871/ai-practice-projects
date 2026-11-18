@@ -32,6 +32,10 @@ class Settings:
             "self-driving-analyst",
         )
 
+        self.sql_cache_lock_ttl_seconds = 30
+        self.sql_cache_wait_seconds = 1.0
+        self.sql_cache_poll_interval_seconds = 0.05
+
         self.app_database_path = DATA_DIRECTORY / "data" / "app_database.sqlite3"
 
         if not self.gemini_api_key:

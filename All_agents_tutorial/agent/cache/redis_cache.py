@@ -3,6 +3,7 @@ from typing import Any
 
 from redis import Redis
 from redis.exceptions import RedisError
+from uuid import uuid4
 
 
 class RedisTTLCache:
@@ -122,3 +123,40 @@ class RedisTTLCache:
                 "total": 0,
                 "hit_rate": 0,
             }
+
+    def _lock_key(self, key: str) -> str:
+        return f"{self._namespace}:lock:{key}"
+
+
+    
+
+    def acquire_lock(self, key: str, ttl_seconds: int) -> str | None:
+        try:
+            token = str(uuid4())
+            acquired = self._client.set(
+                self._lock_key(key),
+                token,
+                nx=True,
+                ex=ttl_seconds,
+            )
+            return token if acquired else None
+        except RedisError:
+            return None
+
+
+    def release_lock(self, key: str, token: str) -> None:
+        try:
+            release_lock_script = """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+            end
+            return 0
+            """
+            self._client.eval(
+                release_lock_script,
+                1,
+                self._lock_key(key),
+                token,
+            )
+        except RedisError:
+            pass

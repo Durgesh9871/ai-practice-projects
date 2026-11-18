@@ -14,6 +14,9 @@ from agent.cache.cache_keys import (
 from agent.cache.cache_factory import sql_result_cache
 from agent.config import setting
 
+from time import monotonic, sleep
+from agent.cache.redis_cache import RedisTTLCache
+
 MAX_ROWS_RETURNED = 50
 
 
@@ -67,39 +70,76 @@ MAX_ROWS_RETURNED = 50
     
 
 
-def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
+
+def run_sql_query(
+    query: str,
+    conn: duckdb.DuckDBPyConnection
+) -> dict[str, Any]:
 
     try:
         validate_read_only_sql(query)
-        
-        if is_cacheable_sql(query):
-            cache_key = make_sql_cache_key(query , dbpath=str(DB_PATH.resolve()),)
+
+        cacheable = is_cacheable_sql(query)
+        cache_key = None
+        lock_token = None
+
+        if cacheable:
+            cache_key = make_sql_cache_key(
+                query,
+                dbpath=str(DB_PATH.resolve()),
+            )
+
             cached_result = sql_result_cache.get(cache_key)
+
             if cached_result is not None:
                 return {
                     **cached_result,
                     "cache_hit": True,
                 }
 
+            if isinstance(sql_result_cache, RedisTTLCache):
+                lock_token = sql_result_cache.acquire_lock(
+                    cache_key,
+                    setting.sql_cache_lock_ttl_seconds,
+                )
+
+                if lock_token is None:
+                    deadline = (
+                        monotonic()
+                        + setting.sql_cache_wait_seconds
+                    )
+
+                    while monotonic() < deadline:
+                        sleep(
+                            setting.sql_cache_poll_interval_seconds
+                        )
+
+                        cached_result = sql_result_cache.get(cache_key)
+
+                        if cached_result is not None:
+                            return {
+                                **cached_result,
+                                "cache_hit": True,
+                            }
+
         cursor = conn.execute(query)
+
         columns = [
             column[0]
             for column in cursor.description
         ]
 
         raw_rows = cursor.fetchmany(MAX_ROWS_RETURNED + 1)
+
         truncated = len(raw_rows) > MAX_ROWS_RETURNED
         limited_rows = raw_rows[:MAX_ROWS_RETURNED]
-        
-        
+
         rows = []
         for row in limited_rows:
             row_dict = dict(zip(columns, row))
             rows.append(row_dict)
 
         safe_rows = redact_rows(rows)
-        # total_rows = len(data_frame)
-        # limited_dataframe = data_frame.head(MAX_ROWS_RETURNED) 
 
         result = {
             "success": True,
@@ -110,15 +150,30 @@ def run_sql_query(query:str,conn:duckdb.DuckDBPyConnection)->dict[str,Any]:
             "truncated": truncated,
             "cache_hit": False,
         }
-        
-        if is_cacheable_sql(query):
-            sql_result_cache.set(cache_key, result, setting.sql_cache_ttl_seconds)
-        
-        return result
 
+        if cacheable:
+            sql_result_cache.set(
+                cache_key,
+                result,
+                setting.sql_cache_ttl_seconds,
+            )
+
+        return result
 
     except Exception as e:
         return {
             "success": False,
             "error": str(e),
-        }   
+        }
+
+    finally:
+        if (
+        lock_token is not None
+        and cache_key is not None
+        and isinstance(sql_result_cache, RedisTTLCache)
+        ):
+    
+            sql_result_cache.release_lock(
+                cache_key,
+                lock_token,
+            )
