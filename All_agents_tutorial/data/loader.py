@@ -3,7 +3,8 @@ from typing import Dict, Tuple
 
 import duckdb
 import pandas as pd
-from agent.cache.memory_cache import sql_result_cache
+# from agent.cache.memory_cache import sql_result_cache
+from agent.cache.cache_factory import sql_result_cache
 
 
 DATA_DIR = Path(__file__).resolve().parent

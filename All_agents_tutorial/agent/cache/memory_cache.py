@@ -79,8 +79,8 @@ class TTLMemoryCache:
             "write": self._write,
             "size": len(self._items),
             "total": total,
-            "hit_rate": self._hit / total if total > 0 else 0,
-            "miss_rate": self._miss / total if total > 0 else 0,
+            "hit_rate": self._hit / total if total > 0 else 0.0,
+            "miss_rate": self._miss / total if total > 0 else 0.0,
         }
        
 

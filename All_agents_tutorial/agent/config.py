@@ -25,6 +25,13 @@ class Settings:
         self.max_final_report_characters = 6000
         self.sql_cache_ttl_seconds = 300
 
+        self.cache_backend = os.getenv("CACHE_BACKEND", "memory").lower()
+        self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.cache_namespace = os.getenv(
+            "CACHE_NAMESPACE",
+            "self-driving-analyst",
+        )
+
         self.app_database_path = DATA_DIRECTORY / "data" / "app_database.sqlite3"
 
         if not self.gemini_api_key:

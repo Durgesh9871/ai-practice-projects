@@ -10,7 +10,8 @@ from agent.cache.cache_keys import (
     make_sql_cache_key,
 )
 
-from agent.cache.memory_cache import sql_result_cache
+# from agent.cache.memory_cache import sql_result_cache
+from agent.cache.cache_factory import sql_result_cache
 from agent.config import setting
 
 MAX_ROWS_RETURNED = 50

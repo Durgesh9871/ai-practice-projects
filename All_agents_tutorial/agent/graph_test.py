@@ -33,7 +33,8 @@ from agent.config import setting
 from agent.services.investigation_service import execute_investigation
 from agent.guardrails.input_guard import validate_objective
 from data.loader import load_csv_data
-from agent.cache.memory_cache import sql_result_cache
+# from agent.cache.memory_cache import sql_result_cache
+from agent.cache.cache_factory import sql_result_cache
 
 
 if __name__ == "__main__":
