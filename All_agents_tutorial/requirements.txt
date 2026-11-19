@@ -56,3 +56,5 @@ rich
 langgraph
 langgraph-checkpoint-sqlite
 redis>=5.0,<6.0
+
+fastapi
