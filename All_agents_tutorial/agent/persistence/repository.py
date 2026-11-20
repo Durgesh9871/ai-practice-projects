@@ -121,3 +121,51 @@ def fail_run(
                 run_id,
             ),
         )
+
+
+def get_run(run_id: str) -> InvestigationRun | None:
+    with get_app_database() as connection:
+        row = connection.execute(
+            """
+            SELECT *
+            FROM investigation_runs
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        ).fetchone()
+
+        if not row:
+            return None
+
+        return dict(row)
+
+
+
+def get_thread_runs(thread_id: str) -> list[dict]:
+    with get_app_database() as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM investigation_runs
+            WHERE thread_id = ?
+            ORDER BY created_at DESC
+            """,
+            (thread_id,),
+        ).fetchall()
+
+    return [dict(row) for row in rows]        
+
+
+def get_run_messages(run_id: str) -> list[dict]:
+    with get_app_database() as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM chat_messages
+            WHERE run_id = ?
+            ORDER BY created_at DESC
+            """,
+            (run_id,),
+        ).fetchall()
+
+    return [dict(row) for row in rows]

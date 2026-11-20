@@ -15,3 +15,23 @@ class InvestigationResponse(BaseModel):
     thread_id: str
     status: str
     final_report: str
+
+
+
+class InvestigationRunResponse(BaseModel):
+    run_id: str
+    thread_id: str
+    objective: str
+    status: str
+    final_report: str | None
+    error_message: str | None
+    created_at: str
+    updated_at: str
+
+
+class ChatMessageResponse(BaseModel):
+    message_id: str
+    run_id: str
+    role: str
+    content: str
+    created_at: str
