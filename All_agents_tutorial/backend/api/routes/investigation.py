@@ -6,6 +6,7 @@ from agent.persistence.repository import (
     get_run,
     get_run_messages,
     get_thread_runs,
+    get_run_events,
 )
 from backend.schema.investigation import (
     ChatMessageResponse,

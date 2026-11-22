@@ -127,6 +127,8 @@ import duckdb
 
 from data.loader import DB_PATH
 from agent.persistence.repository import (
+    
+    add_run_event,
     complete_run,
     create_run,
     fail_run,
@@ -180,6 +182,12 @@ def create_queued_investigation(
         status="queued",
     )
 
+    add_run_event(
+        run_id=run.run_id,
+        event_type="queued",
+        message="Your investigation is queued.",
+    )
+
     save_message(
         run_id=run.run_id,
         role="user",
@@ -204,6 +212,12 @@ def execute_queued_investigation(
     try:
         start_run(run_id)
 
+        add_run_event(
+            run_id=run_id,
+            event_type="started",
+            message="Agent started analyzing your question.",
+        )
+
         final_state = run_graph_investigation(
             run_id=run_id,
             thread_id=thread_id,
@@ -222,6 +236,12 @@ def execute_queued_investigation(
         complete_run(
             run_id=run_id,
             final_report=final_report,
+        )
+
+        add_run_event(
+            run_id=run_id,
+            event_type="completed",
+            message="Investigation completed.",
         )
 
         return {

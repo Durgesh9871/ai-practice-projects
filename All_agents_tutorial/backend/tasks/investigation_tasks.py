@@ -3,10 +3,7 @@ from agent.persistence.repository import fail_run
 from agent.services.investigation_service import execute_queued_investigation
 
 
-@celery_app.task(
-    name="backend.tasks.execute_investigation",
-    bind=True,
-)
+
 
 
 
@@ -25,7 +22,11 @@ def is_retryable_provider_error(error: Exception) -> bool:
     return any(marker in message for marker in retryable_markers)
 
 
-
+@celery_app.task(
+    name="backend.tasks.execute_investigation",
+    bind=True,
+    max_retries=3,
+)
 def execute_investigation_task(
     self,
     run_id: str,
