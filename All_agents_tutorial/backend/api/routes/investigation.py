@@ -48,7 +48,7 @@ def create_investigation(payload: InvestigationRequest, db: duckdb.DuckDBPyConne
 
 
 @router.get("/runs/{run_id}", response_model=InvestigationRunResponse , status_code=status.HTTP_200_OK)        
-def get_investigation_run(run_id: str) -> InvestigationRunResponse:
+def get_investigation_run(run_id: str):
     try:
         run = get_run(run_id)
         if not run:
@@ -57,8 +57,8 @@ def get_investigation_run(run_id: str) -> InvestigationRunResponse:
     
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    # except Exception:
+    #     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
         
 
 

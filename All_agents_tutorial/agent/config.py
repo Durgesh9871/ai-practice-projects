@@ -36,6 +36,11 @@ class Settings:
         self.sql_cache_wait_seconds = 1.0
         self.sql_cache_poll_interval_seconds = 0.05
 
+        self.celery_broker_url = os.getenv(
+            "CELERY_BROKER_URL",
+            "redis://localhost:6379/1",
+        )
+
         self.app_database_path = DATA_DIRECTORY / "data" / "app_database.sqlite3"
 
         if not self.gemini_api_key:
