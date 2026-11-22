@@ -4,10 +4,19 @@ from pydantic import BaseModel ,Field
 from typing import Optional
 
 
+
+class InvestigationEventResponse(BaseModel):
+    event_id: str
+    run_id: str
+    event_sequence: int
+    event_type: str
+    message: str
+    created_at: str
+
+
 class InvestigationRequest(BaseModel):
     objective: str = Field(..., description="The investigation objective" , min_length=10, max_length=500)
     thread_id:  Optional[str] = Field(None, description="The thread ID" )
-
 
 
 class InvestigationResponse(BaseModel):
@@ -17,6 +26,10 @@ class InvestigationResponse(BaseModel):
     final_report: str
 
 
+class InvestigationQueuedResponse(BaseModel):
+    run_id: str
+    thread_id: str
+    status: str
 
 class InvestigationRunResponse(BaseModel):
     run_id: str

@@ -7,12 +7,7 @@ from agent.persistence.database import initialize_database
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from agent.graph import build_graph
-from agent.persistence.repository import (
-    complete_run,
-    create_run,
-    fail_run,
-    save_message,
-)
+
 
 
 def new_investigation_state(objective: str) -> dict:
@@ -54,18 +49,135 @@ def follow_up_state(objective: str) -> dict:
 
 
 
-def execute_investigation(
+# def execute_investigation(
+#     objective: str,
+#     analytics_connection,
+#     thread_id: str | None = None,
+# ) -> dict:
+#     initialize_database()
+
+#     current_thread_id = thread_id or str(uuid4())
+
+#     run = create_run(
+#         thread_id=current_thread_id,
+#         objective=objective,
+#         status="queued"
+#     )
+
+#     save_message(
+#         run_id=run.run_id,
+#         role="user",
+#         content=objective,
+#     )
+
+#     config = {
+#         "configurable": {
+#             "thread_id": current_thread_id,
+#         }
+#     }
+
+
+
+#     try:
+#         with SqliteSaver.from_conn_string(str(setting.app_database_path)) as checkpointer:
+#             graph = build_graph(analytics_connection, checkpointer=checkpointer)
+#             previous_state = graph.get_state(config)
+
+#             if previous_state and previous_state.values:
+#                 graph_input = follow_up_state(objective)
+#             else:
+#                 graph_input = new_investigation_state(objective)
+
+#             final_state = graph.invoke(
+#                 graph_input,
+#                 config=config,
+#             )   
+
+#         final_report = final_state["final_report"]
+
+#         save_message(
+#             run_id=run.run_id,
+#             role="assistant",
+#             content=final_report,
+#         )
+
+#         complete_run(
+#             run_id=run.run_id,
+#             final_report=final_report,
+#         )
+
+#         return {
+#             "run_id": run.run_id,
+#             "thread_id": current_thread_id,
+#             "status": "completed",
+#             "final_report": final_report,
+#             "state": final_state,
+#         }
+
+#     except Exception as error:
+#         fail_run(
+#             run_id=run.run_id,
+#             error_message=str(error),
+#         )
+
+#         raise
+
+
+import duckdb
+
+from data.loader import DB_PATH
+from agent.persistence.repository import (
+    complete_run,
+    create_run,
+    fail_run,
+    save_message,
+    start_run,
+)
+
+
+def run_graph_investigation(
+    run_id: str,
+    thread_id: str,
     objective: str,
-    analytics_connection,
+    analytics_connection: duckdb.DuckDBPyConnection,
+) -> dict:
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
+        }
+    }
+
+    with SqliteSaver.from_conn_string(
+        str(setting.app_database_path)
+    ) as checkpointer:
+        graph = build_graph(
+            analytics_connection,
+            checkpointer=checkpointer,
+        )
+
+        previous_state = graph.get_state(config)
+
+        if previous_state and previous_state.values:
+            graph_input = follow_up_state(objective)
+        else:
+            graph_input = new_investigation_state(objective)
+
+        return graph.invoke(
+            graph_input,
+            config=config,
+        )
+
+
+def create_queued_investigation(
+    objective: str,
     thread_id: str | None = None,
 ) -> dict:
-    initialize_database()
-
     current_thread_id = thread_id or str(uuid4())
 
     run = create_run(
         thread_id=current_thread_id,
         objective=objective,
+        status="queued",
     )
 
     save_message(
@@ -74,54 +186,57 @@ def execute_investigation(
         content=objective,
     )
 
-    config = {
-        "configurable": {
-            "thread_id": current_thread_id,
-        }
+    return {
+        "run_id": run.run_id,
+        "thread_id": current_thread_id,
+        "objective": objective,
+        "status": "queued",
     }
 
 
+def execute_queued_investigation(
+    run_id: str,
+    thread_id: str,
+    objective: str,
+) -> dict:
+    analytics_connection = duckdb.connect(str(DB_PATH))
 
     try:
-        with SqliteSaver.from_conn_string(str(setting.app_database_path)) as checkpointer:
-            graph = build_graph(analytics_connection, checkpointer=checkpointer)
-            previous_state = graph.get_state(config)
+        start_run(run_id)
 
-            if previous_state and previous_state.values:
-                graph_input = follow_up_state(objective)
-            else:
-                graph_input = new_investigation_state(objective)
-
-            final_state = graph.invoke(
-                graph_input,
-                config=config,
-            )   
+        final_state = run_graph_investigation(
+            run_id=run_id,
+            thread_id=thread_id,
+            objective=objective,
+            analytics_connection=analytics_connection,
+        )
 
         final_report = final_state["final_report"]
 
         save_message(
-            run_id=run.run_id,
+            run_id=run_id,
             role="assistant",
             content=final_report,
         )
 
         complete_run(
-            run_id=run.run_id,
+            run_id=run_id,
             final_report=final_report,
         )
 
         return {
-            "run_id": run.run_id,
-            "thread_id": current_thread_id,
+            "run_id": run_id,
+            "thread_id": thread_id,
             "status": "completed",
             "final_report": final_report,
-            "state": final_state,
         }
 
-    except Exception as error:
-        fail_run(
-            run_id=run.run_id,
-            error_message=str(error),
-        )
+    # except Exception as error:
+    #     fail_run(
+    #         run_id=run_id,
+    #         error_message=str(error),
+    #     )
+    #     raise
 
-        raise
+    finally:
+        analytics_connection.close()

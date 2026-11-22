@@ -12,13 +12,22 @@ from backend.schema.investigation import (
     InvestigationRequest,
     InvestigationResponse,
     InvestigationRunResponse,
+    InvestigationQueuedResponse,
+    InvestigationEventResponse,
 )
 
+import logging
+
+from agent.persistence.repository import fail_run
 from agent.services.investigation_service import (
-    execute_investigation,
+    create_queued_investigation,
 )
-import duckdb
-from backend.dependencies import get_analytics_connection
+from backend.tasks.investigation_tasks import (
+    execute_investigation_task,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -27,25 +36,57 @@ from backend.dependencies import get_analytics_connection
 router = APIRouter(prefix="/investigation", tags=["investigation"])
 
 
-@router.post("", response_model=InvestigationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=InvestigationQueuedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def create_investigation(payload: InvestigationRequest):
+    investigation = create_queued_investigation(
+        objective=payload.objective,
+        thread_id=payload.thread_id,
+    )
 
-def create_investigation(payload: InvestigationRequest, db: duckdb.DuckDBPyConnection = Depends(get_analytics_connection)):
     try:
-        result = execute_investigation(objective=payload.objective, analytics_connection=db , thread_id=payload.thread_id)
-        return InvestigationResponse(
-            run_id=result["run_id"],
-            thread_id=result["thread_id"],
-            status=result["status"],
-            final_report=result.get("final_report", ""),
+        execute_investigation_task.delay(
+            run_id=investigation["run_id"],
+            thread_id=investigation["thread_id"],
+            objective=investigation["objective"],
+        )
+    except Exception as error:
+        fail_run(
+            run_id=investigation["run_id"],
+            error_message=str(error),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Investigation could not be queued.",
         )
 
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return InvestigationQueuedResponse(
+        run_id=investigation["run_id"],
+        thread_id=investigation["thread_id"],
+        status=investigation["status"],
+    )
+
+
+
+@router.get(
+    "/runs/{run_id}/events",
+    response_model=list[InvestigationEventResponse],
+)
+def read_run_events(run_id: str):
+    run = get_run(run_id)
+
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Investigation run not found.",
+        )
+
+    return get_run_events(run_id)
     
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-
-
+    
 
 @router.get("/runs/{run_id}", response_model=InvestigationRunResponse , status_code=status.HTTP_200_OK)        
 def get_investigation_run(run_id: str):

@@ -20,6 +20,20 @@ def initialize_database() -> None:
         """)
 
         connection.execute("""
+            CREATE TABLE IF NOT EXISTS investigation_events (
+                event_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                event_sequence INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                message TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (run_id)
+                    REFERENCES investigation_runs(run_id),
+                UNIQUE (run_id, event_sequence)
+            )
+        """)
+
+        connection.execute("""
             CREATE TABLE IF NOT EXISTS chat_messages (
                 message_id TEXT PRIMARY KEY,
                 run_id TEXT NOT NULL,
