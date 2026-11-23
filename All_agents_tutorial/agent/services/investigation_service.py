@@ -137,6 +137,43 @@ from agent.persistence.repository import (
 )
 
 
+NODE_PROGRESS_EVENTS = {
+    "context_manager": (
+        "context_preparation",
+        "Preparing conversation context.",
+    ),
+    "analyst": (
+        "analysis",
+        "Analyzing your question and selecting the next step.",
+    ),
+    "track_tool_usage": (
+        "tool_preparation",
+        "Preparing a safe data query.",
+    ),
+    "tool": (
+        "data_retrieval",
+        "Retrieving data from the database.",
+    ),
+    "observation_node": (
+        "evidence_review",
+        "Reviewing the retrieved data.",
+    ),
+    "completion_validator": (
+        "validation",
+        "Checking whether the evidence is sufficient.",
+    ),
+    "final_report": (
+        "report_preparation",
+        "Preparing the final answer.",
+    ),
+    "safe_stop_node": (
+        "safe_stop",
+        "Investigation reached its safety limit.",
+    ),
+}
+
+
+
 def run_graph_investigation(
     run_id: str,
     thread_id: str,
@@ -164,10 +201,28 @@ def run_graph_investigation(
         else:
             graph_input = new_investigation_state(objective)
 
-        return graph.invoke(
+        for update in graph.stream(
             graph_input,
             config=config,
-        )
+            stream_mode="updates",
+        ):
+            for node_name in update:
+                progress_event = NODE_PROGRESS_EVENTS.get(node_name)
+
+                if progress_event is None:
+                    continue
+
+                event_type, message = progress_event
+
+                add_run_event(
+                    run_id=run_id,
+                    event_type=event_type,
+                    message=message,
+                )
+
+        final_snapshot = graph.get_state(config)
+        return dict(final_snapshot.values)
+           
 
 
 def create_queued_investigation(

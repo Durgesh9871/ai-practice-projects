@@ -23,10 +23,3 @@ class InvestigationRun:
 
 
 
-class InvestigationEventResponse(BaseModel):
-    event_id: str
-    run_id: str
-    event_sequence: int
-    event_type: str
-    message: str
-    created_at: str    

@@ -1,6 +1,8 @@
 
 from fastapi import APIRouter, HTTPException, Depends, status
-
+import asyncio
+import json
+from fastapi.responses import StreamingResponse
 
 from agent.persistence.repository import (
     get_run,
@@ -126,3 +128,60 @@ def read_run_messages(run_id: str):
         )
 
     return get_run_messages(run_id)
+
+
+
+@router.get("/runs/{run_id}/stream")
+async def stream_run_events(
+    run_id: str,
+    request: Request,
+):
+    run = await asyncio.to_thread(get_run, run_id)
+
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Investigation run not found.",
+        )
+
+    async def event_generator():
+        last_event_sequence = 0
+
+        while True:
+            events = await asyncio.to_thread(
+                get_run_events,
+                run_id,
+            )
+
+            new_events = [
+                event
+                for event in events
+                if event["event_sequence"] > last_event_sequence
+            ]
+
+            for event in new_events:
+                last_event_sequence = event["event_sequence"]
+
+                yield (
+                    f"id: {event['event_sequence']}\n"
+                    f"event: {event['event_type']}\n"
+                    f"data: {json.dumps(event)}\n\n"
+                )
+
+                if event["event_type"] in {"completed", "failed"}:
+                    return
+
+            if await request.is_disconnected():
+                return
+
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

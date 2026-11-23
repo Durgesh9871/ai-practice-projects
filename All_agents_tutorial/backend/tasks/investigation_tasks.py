@@ -49,6 +49,12 @@ def execute_investigation_task(
         ):
             delay_seconds = min(60, 10 * (2 ** self.request.retries))
 
+            add_run_event(
+                run_id=run_id,
+                event_type="retry_scheduled",
+                message="Temporary provider limit reached. Retrying shortly.",
+            )
+
             raise self.retry(
                 exc=error,
                 countdown=delay_seconds,
@@ -57,5 +63,11 @@ def execute_investigation_task(
         fail_run(
             run_id=run_id,
             error_message=str(error),
+        )
+
+        add_run_event(
+            run_id=run_id,
+            event_type="failed",
+            message="Investigation could not be completed.",
         )
         raise
