@@ -2,6 +2,7 @@ from backend.worker.celery_app import celery_app
 from agent.persistence.repository import fail_run
 from agent.services.investigation_service import execute_queued_investigation
 
+from agent.persistence.repository import add_run_event, fail_run
 
 
 
