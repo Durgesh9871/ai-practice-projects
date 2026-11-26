@@ -12,10 +12,13 @@ class Settings:
     def __init__(self) -> None:
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.llm_model = "gemini-3.6-flash"
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.groq_llm_model = "openai/gpt-oss-120b"
         self.max_steps = 6
         self.max_tool_calls = 5
         self.cache_ttl_seconds = 3600
-        self.llm_provider = "gemini"
+        # self.llm_provider = "gemini"
+        self.llm_provider = "groq"
         self.temperature = 0.1
         self.top_p = 0.9
         self.max_sql_errors = 2

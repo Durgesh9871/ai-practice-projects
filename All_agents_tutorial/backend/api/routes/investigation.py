@@ -40,6 +40,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/investigation", tags=["investigation"])
 
 
+# @router.post(
+#     "",
+#     response_model=InvestigationQueuedResponse,
+#     status_code=status.HTTP_202_ACCEPTED,
+# )
+# def create_investigation(payload: InvestigationRequest):
+#     investigation = create_queued_investigation(
+#         objective=payload.objective,
+#         thread_id=payload.thread_id,
+#     )
+
+#     try:
+#         execute_investigation_task.delay(
+#             run_id=investigation["run_id"],
+#             thread_id=investigation["thread_id"],
+#             objective=investigation["objective"],
+#         )
+#     except Exception as error:
+#         fail_run(
+#             run_id=investigation["run_id"],
+#             error_message=str(error),
+#         )
+#         raise HTTPException(
+#             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+#             detail="Investigation could not be queued.",
+#         )
+
+#     return InvestigationQueuedResponse(
+#         run_id=investigation["run_id"],
+#         thread_id=investigation["thread_id"],
+#         status=investigation["status"],
+#     )
+
+
 @router.post(
     "",
     response_model=InvestigationQueuedResponse,
@@ -51,28 +85,17 @@ def create_investigation(payload: InvestigationRequest):
         thread_id=payload.thread_id,
     )
 
-    try:
-        execute_investigation_task.delay(
-            run_id=investigation["run_id"],
-            thread_id=investigation["thread_id"],
-            objective=investigation["objective"],
-        )
-    except Exception as error:
-        fail_run(
-            run_id=investigation["run_id"],
-            error_message=str(error),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Investigation could not be queued.",
-        )
+    execute_investigation_task.delay(
+        run_id=investigation["run_id"],
+        thread_id=investigation["thread_id"],
+        objective=investigation["objective"],
+    )
 
     return InvestigationQueuedResponse(
         run_id=investigation["run_id"],
         thread_id=investigation["thread_id"],
-        status=investigation["status"],
+        status="queued",
     )
-
 
 
 @router.get(

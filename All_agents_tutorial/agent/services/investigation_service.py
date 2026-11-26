@@ -172,11 +172,11 @@ NODE_PROGRESS_EVENTS = {
     ),
 }
 
-def publish_report_chunk(chunk: str) -> None:
+def publish_report_chunk(run_id: str, text_chunk: str) -> None:
     add_run_event(
         run_id=run_id,
         event_type="report_chunk",
-        message=chunk,
+        message=text_chunk,
     )
 
 def run_graph_investigation(
@@ -191,13 +191,16 @@ def run_graph_investigation(
         }
     }
 
+    def publish_chunk(text_chunk: str) -> None:
+        publish_report_chunk(run_id=run_id, text_chunk=text_chunk)
+
     with SqliteSaver.from_conn_string(
         str(setting.app_database_path)
     ) as checkpointer:
         graph = build_graph(
             analytics_connection,
             checkpointer=checkpointer,
-            report_chunk_publisher=publish_report_chunk,
+            report_chunk_publisher=publish_chunk,
         )
 
         previous_state = graph.get_state(config)
@@ -278,7 +281,7 @@ def execute_queued_investigation(
             event_type="started",
             message="Agent started analyzing your question.",
         )
-
+ 
         final_state = run_graph_investigation(
             run_id=run_id,
             thread_id=thread_id,
