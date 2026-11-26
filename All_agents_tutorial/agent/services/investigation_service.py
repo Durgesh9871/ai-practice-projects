@@ -172,7 +172,12 @@ NODE_PROGRESS_EVENTS = {
     ),
 }
 
-
+def publish_report_chunk(chunk: str) -> None:
+    add_run_event(
+        run_id=run_id,
+        event_type="report_chunk",
+        message=chunk,
+    )
 
 def run_graph_investigation(
     run_id: str,
@@ -192,6 +197,7 @@ def run_graph_investigation(
         graph = build_graph(
             analytics_connection,
             checkpointer=checkpointer,
+            report_chunk_publisher=publish_report_chunk,
         )
 
         previous_state = graph.get_state(config)

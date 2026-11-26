@@ -133,11 +133,11 @@ def route_after_observation(state: InvestigationGraphState):
 
 
 
-def build_graph(conn ,checkpointer=None):
+def build_graph(conn ,checkpointer=None,report_chunk_publisher=None):
 
     workflow = StateGraph(InvestigationGraphState)
 
-    analyst_node = make_analyst_node(conn)
+    analyst_node = make_analyst_node(conn ,publish_chunk=report_chunk_publisher)
 
     tools = bind_tools(conn)
     tools_node = ToolNode(tools)

@@ -1,6 +1,6 @@
 from agent.guardrails.pil_guardrails import redact_text
 from agent.tool_policy import DATA_TOOL_NAMES
-
+import re
 
 
 _RELEASE_BOUNDARY = re.compile(r"[.!?]\s+|\n+")

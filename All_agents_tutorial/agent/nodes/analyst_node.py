@@ -1,15 +1,36 @@
 from agent.graphstate import InvestigationGraphState
 from agent.provider.factory import get_llm
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage,message_chunk_to_message
 
 from agent.tool_register import bind_tools
 import duckdb
 from agent.tool_policy import DATA_TOOL_NAMES
 import json
 from agent.config import setting
+from collections.abc import Callable
 
 
-def make_analyst_node(conn: duckdb.DuckDBPyConnection):
+
+def extract_stream_text(content) -> str:
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "")
+            for block in content
+            if (
+                isinstance(block, dict)
+                and block.get("type", "text") == "text"
+            )
+        )
+
+    return ""
+
+
+
+def make_analyst_node(conn: duckdb.DuckDBPyConnection,
+    publish_chunk: Callable[[str], None] | None = None,):
     analyst_tools = bind_tools(conn)
      
    
@@ -96,12 +117,30 @@ Rules:
         llm = get_llm()
         llm_with_tools = llm.bind_tools(analyst_tools)
 
-        response = llm_with_tools.invoke(messages)
+        # response = llm_with_tools.invoke(messages)
 
-        # data_tool_calls = sum(
-        #     call["name"] in DATA_TOOL_NAMES
-        #     for call in response.tool_calls
-        # )
+        combined_chunk = None
+
+        for chunk in llm_with_tools.stream(messages):
+            combined_chunk = (
+                chunk
+                if combined_chunk is None
+                else combined_chunk + chunk
+            )
+            text_chunk = extract_stream_text(chunk.content)
+            
+            if (
+                publish_chunk
+                and state.get("findings", [])
+                and text_chunk
+            ):
+                publish_chunk(text_chunk)
+
+        if combined_chunk is None:
+            raise RuntimeError("LLM returned no response.")
+
+        response = message_chunk_to_message(combined_chunk)
+            
 
         return {
             "messages": [response],
